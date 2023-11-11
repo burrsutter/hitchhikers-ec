@@ -307,6 +307,9 @@ jq '.components[0].attestations[].predicateBuildType' ec-output.json
 "https://localhost/dummy-type"
 ```
 
+
+I think docker.io is rate-limiting me, so switching to quay.io
+
 ### Switch to quay.io 
 
 ```
