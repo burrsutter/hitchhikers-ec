@@ -139,6 +139,19 @@ tlog entry created with index: 49132285
 Pushing signature to: index.docker.io/burrsutter/quarkus-demo
 ```
 
+```
+cosign verify --key cosign.pub docker.io/burrsutter/quarkus-demo:v2 | jq .
+```
+
+```
+Verification for index.docker.io/burrsutter/quarkus-demo:v2 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+```
+
+
 Notice the new .sig tag in the repository
 
 ![docker.io tag sig](/images/cosign-sign-docker-io-sig-tag.png)
@@ -544,8 +557,49 @@ jq '.components[].violations[].msg' ec-output-rules-fail-quay.json
 "The builder ID \"https://localhost/dummy-id\" is not expected, \"https://anotherhost/another-dummy-id\""
 ```
 
-## Validate a custom attestation
+## Create and validate a custom attestation
 
+```
+cosign verify-attestation --key cosign.pub quay.io/bsutter/quarkus-demo:v2
+```
+
+```
+Error: none of the attestations matched the predicate type: custom, found: https://slsa.dev/provenance/v0.2
+main.go:74: error during command execution: none of the attestations matched the predicate type: custom, found: https://slsa.dev/provenance/v0.2
+```
+
+```
+cosign verify-attestation --type slsaprovenance --key cosign.pub quay.io/bsutter/quarkus-demo:v2
+```
+
+```
+Verification for quay.io/bsutter/quarkus-demo:v2 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+{"payloadType":"application/vnd.in-toto+json","payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJxdWF5LmlvL2JzdXR0ZXIvcXVhcmt1cy1kZW1vIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjhhYWYwY2Y0YzBhZTEzMTA4OTYzZjU3YjBlNTg4MjBjNjdiMjZkY2NjNWQ4NjdiOWNiMWFiYjBiNzg4NjU1NmEifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6Imh0dHBzOi8vbG9jYWxob3N0L2R1bW15LWlkIn0sImJ1aWxkVHlwZSI6Imh0dHBzOi8vbG9jYWxob3N0L2R1bW15LXR5cGUiLCJpbnZvY2F0aW9uIjp7ImNvbmZpZ1NvdXJjZSI6e319LCJidWlsZENvbmZpZyI6e30sIm1ldGFkYXRhIjp7ImJ1aWxkU3RhcnRlZE9uIjoiMjAyMy0wOS0yNVQxNjoyNjo0NFoiLCJidWlsZEZpbmlzaGVkT24iOiIyMDIzLTA5LTI1VDE2OjI4OjU5WiIsImNvbXBsZXRlbmVzcyI6eyJwYXJhbWV0ZXJzIjpmYWxzZSwiZW52aXJvbm1lbnQiOmZhbHNlLCJtYXRlcmlhbHMiOmZhbHNlfSwicmVwcm9kdWNpYmxlIjpmYWxzZX19fQ==","signatures":[{"keyid":"","sig":"MEUCIQCRe6MMGB9hBnbJrLOG/20604+qitRk7c6QxKcSqsfhJAIgY01Rx9fXQgEQw4/UbbZDm8XqOFLJUH0uaClOSfAa9hk="}]}
+```
+
+```
+echo '
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "https://cosign.sigstore.dev/attestation/v1",
+  "subject": [
+    {
+    }
+  ],
+  "predicate": {
+    "Data": "stuff"
+  }
+}
+' > custom-predicate.json
+```
+
+```
+cosign attest --predicate custom-predicate.json --type custom --key cosign.key quay.io/burrsutter/quarkus-demo:v2
+```
 
 
 ## Playing with skopeo

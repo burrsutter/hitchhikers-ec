@@ -1,0 +1,13 @@
+
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "https://cosign.sigstore.dev/attestation/v1",
+  "subject": [
+    {
+    }
+  ],
+  "predicate": {
+    "Data": "stuff"
+  }
+}
+
