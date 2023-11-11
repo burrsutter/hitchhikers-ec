@@ -1,0 +1,20 @@
+{
+  "builder": {
+    "id": "https://localhost/dummy-id"
+  },
+  "buildType": "https://localhost/dummy-type",
+  "invocation": {},
+  "buildConfig": {},
+  "metadata": {
+    "buildStartedOn": "2023-09-25T16:26:44Z",
+    "buildFinishedOn": "2023-09-25T16:28:59Z",
+    "completeness": {
+      "parameters": false,
+      "environment": false,
+      "materials": false
+    },
+    "reproducible": false
+  },
+  "materials": []
+}
+

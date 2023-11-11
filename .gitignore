@@ -1,0 +1,9 @@
+bin
+cosign.key
+cosign.pub
+ec-input-rules-quay.json
+ec-output-rules-quay.json
+ec-output-rules.json
+ec-output.json
+ec-output-quay.json
+ec-output-rules-fail-quay.json
