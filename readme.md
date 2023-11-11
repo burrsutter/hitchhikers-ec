@@ -1,14 +1,16 @@
 # Hello World Enterprise Contract
 
-[Getting Started] (https://enterprisecontract.dev/docs/user-guide/main/hitchhikers-guide.html)
+Follows the hitchhiker's guide at enterprisecontract.dev
+
+[Getting Started](https://enterprisecontract.dev/docs/user-guide/main/hitchhikers-guide.html)
 
 ## CLIs 
 
-[ec] (https://enterprisecontract.dev/docs/user-guide/main/cli.html)
+[ec](https://enterprisecontract.dev/docs/user-guide/main/cli.html)
 
 [cosign](https://github.com/sigstore/cosign#installation)
 
-[docker] (https://docs.docker.com/engine/reference/run/)
+[docker](https://docs.docker.com/engine/reference/run/)
 
 [jq](https://jqlang.github.io/jq/download/)
 
@@ -257,14 +259,24 @@ jq '.success' ec-output.json
 true
 ```
 
+
 ```
-jq '.success' ec-output.json
+jq '.components[0].attestations[]' ec-output.json
 ```
 
 ```
-jq '.components[0].attestations[]'
+{
+  "type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "https://slsa.dev/provenance/v0.2",
+  "predicateBuildType": "https://localhost/dummy-type",
+  "signatures": [
+    {
+      "keyid": "",
+      "sig": "MEUCIAGfsfnELAfmrsf4UAbvCugBjDLxvTMOAfH1pJgI12M5AiEAm6sMwvNeUOpCRASmoxZ6E/MPto+JtccuLQavYYFQtSI="
+    }
+  ]
+}
 ```
-
 
 ```
 jq '.components[0].attestations[0].predicateType' ec-output.json
@@ -301,15 +313,15 @@ cosign attest --predicate predicate.json --type slsaprovenance --key cosign.key 
 ![quay.io tag att](/images/cosign-sign-quay-io-att-tag.png)
 
 ```
-cosign tree docker.io/burrsutter/quarkus-demo:v2
+cosign tree quay.io/bsutter/quarkus-demo:v2
 ```
 
 ```
-📦 Supply Chain Security Related artifacts for an image: docker.io/burrsutter/quarkus-demo:v2
-└── 🔐 Signatures for an image tag: index.docker.io/burrsutter/quarkus-demo:sha256-8aaf0cf4c0ae13108963f57b0e58820c67b26dccc5d867b9cb1abb0b7886556a.sig
-   └── 🍒 sha256:081851a2d620fdfc64d112a58c302ac15798327b43ab42256c290af5093cd25e
-└── 💾 Attestations for an image tag: index.docker.io/burrsutter/quarkus-demo:sha256-8aaf0cf4c0ae13108963f57b0e58820c67b26dccc5d867b9cb1abb0b7886556a.att
-   └── 🍒 sha256:b59c17b82f64f845891981275612ae58c77be8421b583be7b4d174ad08f52c02
+📦 Supply Chain Security Related artifacts for an image: quay.io/bsutter/quarkus-demo:v2
+└── 🔐 Signatures for an image tag: quay.io/bsutter/quarkus-demo:sha256-8aaf0cf4c0ae13108963f57b0e58820c67b26dccc5d867b9cb1abb0b7886556a.sig
+   └── 🍒 sha256:b7bf5d2db92eca181694d6437b70132e423082d4ee36d41a6226ecebeb7cd07d
+└── 💾 Attestations for an image tag: quay.io/bsutter/quarkus-demo:sha256-8aaf0cf4c0ae13108963f57b0e58820c67b26dccc5d867b9cb1abb0b7886556a.att
+   └── 🍒 sha256:e90e15a7dde65777f7683228014489ccbf2ff834c696398b3905552407f7ef6e
 ```
 
 ```
@@ -467,9 +479,7 @@ jq '.image.config.Entrypoint[]' ec-input-rules-quay.json
 "/opt/jboss/container/java/run/run-java.sh"
 ```
 
-Now let's try for a failing rule
-
-Double check the current builder id 
+And check the current builder id 
 
 ```
 jq '.attestations[].predicate.builder.id' ec-input-rules-quay.json
@@ -478,6 +488,10 @@ jq '.attestations[].predicate.builder.id' ec-input-rules-quay.json
 ```
 "https://localhost/dummy-id"
 ```
+
+
+Now let's try for a failing rule
+
 
 Create a rules-fail.rego 
 
