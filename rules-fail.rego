@@ -20,12 +20,12 @@ deny contains result if {
 	attestation.statement.predicateType == "https://slsa.dev/provenance/v0.2"
 
 	expected := "https://anotherhost/another-dummy-id"
-	got := attestation.statement.predicate.builder.id
+	received := attestation.statement.predicate.builder.id
 
-	expected != got
+	expected != received
 
 	result := {
-		"code": "zero_to_hero.builder_id",
-		"msg": sprintf("The builder ID %q is not expected, %q", [got, expected])
+		"code": "mystuff.builder_id",
+		"msg": sprintf("The builder ID %q is NOT invalid, expected %q", [received, expected])
 	}
 }

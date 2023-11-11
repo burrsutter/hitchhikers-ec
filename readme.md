@@ -502,13 +502,9 @@ jq '.attestations[].predicate.builder.id' ec-input-rules-quay.json
 "https://localhost/dummy-id"
 ```
 
-
 Now let's try for a failing rule
 
-
 Create a rules-fail.rego 
-
-
 
 ```
 echo 'package mypackage
@@ -533,13 +529,13 @@ deny contains result if {
 	attestation.statement.predicateType == "https://slsa.dev/provenance/v0.2"
 
 	expected := "https://anotherhost/another-dummy-id"
-	got := attestation.statement.predicate.builder.id
+	received := attestation.statement.predicate.builder.id
 
-	expected != got
+	expected != received
 
 	result := {
-		"code": "zero_to_hero.builder_id",
-		"msg": sprintf("The builder ID %q is not expected, %q", [got, expected])
+		"code": "mystuff.builder_id",
+		"msg": sprintf("The builder ID %q is NOT invalid, expected %q", [received, expected])
 	}
 }' > rules-fail.rego
 ```
@@ -554,10 +550,18 @@ jq '.components[].violations[].msg' ec-output-rules-fail-quay.json
 ```
 
 ```
-"The builder ID \"https://localhost/dummy-id\" is not expected, \"https://anotherhost/another-dummy-id\""
+"The builder ID \"https://localhost/dummy-id\" is NOT invalid, received \"https://anotherhost/another-dummy-id\""
 ```
 
 ## Create and validate a custom attestation
+
+Verify the signature
+
+```
+cosign verify --key cosign.pub docker.io/burrsutter/quarkus-demo:v2 | jq .
+```
+
+Verify the attestation
 
 ```
 cosign verify-attestation --key cosign.pub quay.io/bsutter/quarkus-demo:v2
