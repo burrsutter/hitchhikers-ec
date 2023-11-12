@@ -193,6 +193,22 @@ cosign tree quay.io/bsutter/partnercatalog:v1
 ```
 
 ```
+cosign verify-attestation --key cosign.pub quay.io/bsutter/partnercatalog:v1
+```
+
+```
+Verification for quay.io/bsutter/partnercatalog:v1 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+{"payloadType":"application/vnd.in-toto+json","payload"
+```
+
+lots of base64 encoded stuff
+
+
+```
 cosign verify-attestation --key cosign.pub quay.io/bsutter/partnercatalog:v1 | jq -r .payload | base64 -d | jq .
 ```
 
