@@ -1,6 +1,8 @@
 bin
 cosign.key
 cosign.pub
+burr-cosign.pub
+remote.pub
 ec-input-rules-quay.json
 ec-output-rules-quay.json
 ec-output-rules.json
@@ -8,3 +10,7 @@ ec-output.json
 ec-output-quay.json
 ec-output-rules-fail-quay.json
 partner-catalog
+verify-attestation-output.txt
+cosign-verify-attestation-output.json
+ec-input-output.json
+ec-real-input.json

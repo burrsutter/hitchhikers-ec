@@ -25,6 +25,6 @@ deny contains result if {
 
 	result := {
 		"code": "zero_to_hero.builder_id",
-		"msg": sprintf("The builder ID %q is not expected, %q", [got, expected])
+		"msg": sprintf("The builder ID %q is not expected, %q", [got, expected]),
 	}
 }

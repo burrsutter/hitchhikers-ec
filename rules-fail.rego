@@ -19,13 +19,13 @@ deny contains result if {
 	some attestation in input.attestations
 	attestation.statement.predicateType == "https://slsa.dev/provenance/v0.2"
 
-	expected := "https://anotherhost/another-dummy-id"
-	received := attestation.statement.predicate.builder.id
+	expected := "https://localhost/NOT-dummy-id"
+	got := attestation.statement.predicate.builder.id
 
-	expected != received
+	expected != got
 
 	result := {
-		"code": "mystuff.builder_id",
-		"msg": sprintf("The builder ID %q is NOT invalid, expected %q", [received, expected])
+		"code": "zero_to_hero.builder_id",
+		"msg": sprintf("The builder ID %q is not expected. Expected %q", [got, expected])
 	}
 }

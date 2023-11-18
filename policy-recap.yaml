@@ -1,0 +1,6 @@
+
+---
+sources:
+  - policy:
+      - /Users/burr/projects/hitchhikers-ec/rules-formatted.rego
+

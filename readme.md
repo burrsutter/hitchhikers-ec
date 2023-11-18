@@ -4,6 +4,13 @@ Follows the hitchhiker's guide at enterprisecontract.dev
 
 [Getting Started](https://enterprisecontract.dev/docs/user-guide/main/hitchhikers-guide.html)
 
+
+Assumes you know how to build, tag and push container images to a registry like docker.io or quay.io
+
+You will need to have an image that you personally control at either docker.io or quay.io to complete the steps below.
+
+Note: docker.io may rate limit you.  
+
 ## CLIs 
 
 [ec](https://enterprisecontract.dev/docs/user-guide/main/cli.html)
@@ -12,7 +19,7 @@ Follows the hitchhiker's guide at enterprisecontract.dev
 
 [docker](https://docs.docker.com/engine/reference/run/)
 
-[jq](https://jqlang.github.io/jq/download/)
+[jq](https://jqlang.github.io/jq/download/) -  `brew install jq`
 
 ### Install `ec`
 
@@ -110,7 +117,7 @@ Server: Docker Desktop 4.25.0 (126437)
   GitCommit:        de40ad0
 ```
 
-## ec validate an image
+## cosign sign an image
 
 You need to have access to a container image that you own. 
 
@@ -125,6 +132,14 @@ cosign generate-key-pair
 ```
 
 ![generate-key-pair](/images/cosign-generate-key-pair.png)
+
+
+Remember the password
+
+
+```
+docker login docker.io 
+```
 
 ```
 cosign sign --key cosign.key docker.io/burrsutter/quarkus-demo:v2
@@ -151,10 +166,22 @@ The following checks were performed on each of these signatures:
   - The signatures were verified against the specified public key
 ```
 
-
 Notice the new .sig tag in the repository
 
 ![docker.io tag sig](/images/cosign-sign-docker-io-sig-tag.png)
+
+Check the attestations
+
+```
+ cosign verify-attestation --type slsaprovenance --key cosign.pub docker.io/burrsutter/partnercatalog:v1
+```
+
+```
+Error: no matching attestations:
+main.go:74: error during command execution: no matching attestations:
+```
+
+Let's go add an attestation
 
 
 ### SLSA Attestation
@@ -212,6 +239,63 @@ cosign tree docker.io/burrsutter/quarkus-demo:v2
    └── 🍒 sha256:b59c17b82f64f845891981275612ae58c77be8421b583be7b4d174ad08f52c02
 └── 🔐 Signatures for an image tag: index.docker.io/burrsutter/quarkus-demo:sha256-8aaf0cf4c0ae13108963f57b0e58820c67b26dccc5d867b9cb1abb0b7886556a.sig
    └── 🍒 sha256:081851a2d620fdfc64d112a58c302ac15798327b43ab42256c290af5093cd25e
+```
+
+```
+cosign verify-attestation --type slsaprovenance --key cosign.pub docker.io/burrsutter/quarkus-demo:v2
+```
+
+```
+Verification for docker.io/burrsutter/quarkus-demo:v2 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+{"payloadType":"application/vnd.in-toto+json","payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJpbmRleC5kb2NrZXIuaW8vYnVycnN1dHRlci9xdWFya3VzLWRlbW8iLCJkaWdlc3QiOnsic2hhMjU2IjoiOGFhZjBjZjRjMGFlMTMxMDg5NjNmNTdiMGU1ODgyMGM2N2IyNmRjY2M1ZDg2N2I5Y2IxYWJiMGI3ODg2NTU2YSJ9fV0sInByZWRpY2F0ZSI6eyJidWlsZGVyIjp7ImlkIjoiaHR0cHM6Ly9sb2NhbGhvc3QvZHVtbXktaWQifSwiYnVpbGRUeXBlIjoiaHR0cHM6Ly9sb2NhbGhvc3QvZHVtbXktdHlwZSIsImludm9jYXRpb24iOnsiY29uZmlnU291cmNlIjp7fX0sImJ1aWxkQ29uZmlnIjp7fSwibWV0YWRhdGEiOnsiYnVpbGRTdGFydGVkT24iOiIyMDIzLTA5LTI1VDE2OjI2OjQ0WiIsImJ1aWxkRmluaXNoZWRPbiI6IjIwMjMtMDktMjVUMTY6Mjg6NTlaIiwiY29tcGxldGVuZXNzIjp7InBhcmFtZXRlcnMiOmZhbHNlLCJlbnZpcm9ubWVudCI6ZmFsc2UsIm1hdGVyaWFscyI6ZmFsc2V9LCJyZXByb2R1Y2libGUiOmZhbHNlfX19","signatures":[{"keyid":"","sig":"MEUCIAGfsfnELAfmrsf4UAbvCugBjDLxvTMOAfH1pJgI12M5AiEAm6sMwvNeUOpCRASmoxZ6E/MPto+JtccuLQavYYFQtSI="}]}
+```
+
+```
+cosign verify-attestation --type slsaprovenance --key cosign.pub docker.io/burrsutter/quarkus-demo:v2 | jq -r .payload | base64 -d | jq .
+```
+
+```
+Verification for docker.io/burrsutter/quarkus-demo:v2 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "https://slsa.dev/provenance/v0.2",
+  "subject": [
+    {
+      "name": "index.docker.io/burrsutter/quarkus-demo",
+      "digest": {
+        "sha256": "8aaf0cf4c0ae13108963f57b0e58820c67b26dccc5d867b9cb1abb0b7886556a"
+      }
+    }
+  ],
+  "predicate": {
+    "builder": {
+      "id": "https://localhost/dummy-id"
+    },
+    "buildType": "https://localhost/dummy-type",
+    "invocation": {
+      "configSource": {}
+    },
+    "buildConfig": {},
+    "metadata": {
+      "buildStartedOn": "2023-09-25T16:26:44Z",
+      "buildFinishedOn": "2023-09-25T16:28:59Z",
+      "completeness": {
+        "parameters": false,
+        "environment": false,
+        "materials": false
+      },
+      "reproducible": false
+    }
+  }
+}
 ```
 
 ### Validate with Enterprise Contract
@@ -307,10 +391,23 @@ jq '.components[0].attestations[].predicateBuildType' ec-output.json
 "https://localhost/dummy-type"
 ```
 
-
-I think docker.io is rate-limiting me, so switching to quay.io
+and if docker.io is rate-limiting you switch to quay.io
 
 ### Switch to quay.io 
+
+```
+docker login quay.io
+```
+
+```
+docker tag docker.io/burrsutter/quarkus-demo:v2 quay.io/bsutter/quarkus-demo:v2
+docker push quay.io/bsutter/quarkus-demo:v2
+```
+
+Watch out for quay.io marking images as private by default.  You can manually flip private to public via their GUI.
+
+![private by default](/images/partner-catalog-quay-io-1.png)
+
 
 ```
 cosign sign --key cosign.key quay.io/bsutter/quarkus-demo:v2
@@ -341,6 +438,84 @@ cosign tree quay.io/bsutter/quarkus-demo:v2
 ```
 
 ```
+cosign verify-attestation --type slsaprovenance --key cosign.pub quay.io/bsutter/quarkus-demo:v2
+```
+
+```
+Verification for quay.io/bsutter/quarkus-demo:v2 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The signatures were verified against the specified public key
+{"payloadType":"application/vnd.in-toto+json","payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJxdWF5LmlvL2JzdXR0ZXIvcXVhcmt1cy1kZW1vIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjhhYWYwY2Y0YzBhZTEzMTA4OTYzZjU3YjBlNTg4MjBjNjdiMjZkY2NjNWQ4NjdiOWNiMWFiYjBiNzg4NjU1NmEifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6Imh0dHBzOi8vbG9jYWxob3N0L2R1bW15LWlkIn0sImJ1aWxkVHlwZSI6Imh0dHBzOi8vbG9jYWxob3N0L2R1bW15LXR5cGUiLCJpbnZvY2F0aW9uIjp7ImNvbmZpZ1NvdXJjZSI6e319LCJidWlsZENvbmZpZyI6e30sIm1ldGFkYXRhIjp7ImJ1aWxkU3RhcnRlZE9uIjoiMjAyMy0wOS0yNVQxNjoyNjo0NFoiLCJidWlsZEZpbmlzaGVkT24iOiIyMDIzLTA5LTI1VDE2OjI4OjU5WiIsImNvbXBsZXRlbmVzcyI6eyJwYXJhbWV0ZXJzIjpmYWxzZSwiZW52aXJvbm1lbnQiOmZhbHNlLCJtYXRlcmlhbHMiOmZhbHNlfSwicmVwcm9kdWNpYmxlIjpmYWxzZX19fQ==","signatures":[{"keyid":"","sig":"MEUCIQCRe6MMGB9hBnbJrLOG/20604+qitRk7c6QxKcSqsfhJAIgY01Rx9fXQgEQw4/UbbZDm8XqOFLJUH0uaClOSfAa9hk="}]}
+```
+
+```
+cosign verify-attestation --type slsaprovenance --key cosign.pub quay.io/bsutter/quarkus-demo:v2 | jq -r .payload | base64 -d | jq . 
+```
+
+```
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "https://slsa.dev/provenance/v0.2",
+  "subject": [
+    {
+      "name": "quay.io/bsutter/quarkus-demo",
+      "digest": {
+        "sha256": "8aaf0cf4c0ae13108963f57b0e58820c67b26dccc5d867b9cb1abb0b7886556a"
+      }
+    }
+  ],
+  "predicate": {
+    "builder": {
+      "id": "https://localhost/dummy-id"
+    },
+    "buildType": "https://localhost/dummy-type",
+    "invocation": {
+      "configSource": {}
+    },
+    "buildConfig": {},
+    "metadata": {
+      "buildStartedOn": "2023-09-25T16:26:44Z",
+      "buildFinishedOn": "2023-09-25T16:28:59Z",
+      "completeness": {
+        "parameters": false,
+        "environment": false,
+        "materials": false
+      },
+      "reproducible": false
+    }
+  }
+}
+```
+
+```
+cosign verify-attestation --type slsaprovenance --key cosign.pub quay.io/bsutter/quarkus-demo:v2 | jq -r .payload | base64 -d | jq . | jq '.predicateType'
+```
+
+```
+"https://slsa.dev/provenance/v0.2"
+```
+
+```
+cosign verify-attestation --type slsaprovenance --key cosign.pub quay.io/bsutter/quarkus-demo:v2 | jq -r .payload | base64 -d | jq . | jq '.predicate.builder.id'
+```
+
+```
+"https://localhost/dummy-id"
+```
+
+```
+cosign verify-attestation --type slsaprovenance --key cosign.pub quay.io/bsutter/quarkus-demo:v2 | jq -r .payload | base64 -d | jq . | jq '.predicate.buildType'
+```
+
+```
+"https://localhost/dummy-type"
+```
+
+![screen shot](/images/cosign-verify-attestation.png)
+
+```
 ec validate image --public-key cosign.pub --image quay.io/bsutter/quarkus-demo:v2 --output json --policy '' > ec-output-quay.json
 ```
 
@@ -368,6 +543,120 @@ jq '.components[0].attestations[].predicateBuildType' ec-output-quay.json
 "https://localhost/dummy-type"
 ```
 
+```
+ec validate image --public-key cosign.pub --image quay.io/bsutter/quarkus-demo:v2 --output json --policy '' | jq '.components[0].attestations[].predicateBuildType'
+```
+
+```
+"https://localhost/dummy-type"
+```
+
+And what did `ec` as its input
+
+```
+ec validate image --public-key cosign.pub --image quay.io/bsutter/quarkus-demo:v2 --output policy-input --policy '' | jq '.attestations[]'
+```
+
+```
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "https://slsa.dev/provenance/v0.2",
+  "subject": [
+    {
+      "name": "quay.io/bsutter/quarkus-demo",
+      "digest": {
+        "sha256": "8aaf0cf4c0ae13108963f57b0e58820c67b26dccc5d867b9cb1abb0b7886556a"
+      }
+    }
+  ],
+  "predicate": {
+    "builder": {
+      "id": "https://localhost/dummy-id"
+    },
+    "buildType": "https://localhost/dummy-type",
+    "invocation": {
+      "configSource": {}
+    },
+    "buildConfig": {},
+    "metadata": {
+      "buildStartedOn": "2023-09-25T16:26:44Z",
+      "buildFinishedOn": "2023-09-25T16:28:59Z",
+      "completeness": {
+        "parameters": false,
+        "environment": false,
+        "materials": false
+      },
+      "reproducible": false
+    }
+  },
+  "extra": {
+    "signatures": [
+      {
+        "keyid": "",
+        "sig": "MEUCIQCRe6MMGB9hBnbJrLOG/20604+qitRk7c6QxKcSqsfhJAIgY01Rx9fXQgEQw4/UbbZDm8XqOFLJUH0uaClOSfAa9hk="
+      }
+    ]
+  },
+  "statement": {
+    "_type": "https://in-toto.io/Statement/v0.1",
+    "predicateType": "https://slsa.dev/provenance/v0.2",
+    "subject": [
+      {
+        "name": "quay.io/bsutter/quarkus-demo",
+        "digest": {
+          "sha256": "8aaf0cf4c0ae13108963f57b0e58820c67b26dccc5d867b9cb1abb0b7886556a"
+        }
+      }
+    ],
+    "predicate": {
+      "builder": {
+        "id": "https://localhost/dummy-id"
+      },
+      "buildType": "https://localhost/dummy-type",
+      "invocation": {
+        "configSource": {}
+      },
+      "buildConfig": {},
+      "metadata": {
+        "buildStartedOn": "2023-09-25T16:26:44Z",
+        "buildFinishedOn": "2023-09-25T16:28:59Z",
+        "completeness": {
+          "parameters": false,
+          "environment": false,
+          "materials": false
+        },
+        "reproducible": false
+      }
+    }
+  },
+  "signatures": [
+    {
+      "keyid": "",
+      "sig": "MEUCIQCRe6MMGB9hBnbJrLOG/20604+qitRk7c6QxKcSqsfhJAIgY01Rx9fXQgEQw4/UbbZDm8XqOFLJUH0uaClOSfAa9hk="
+    }
+  ]
+}
+```
+
+ec's view
+
+```
+ec validate image --public-key cosign.pub --image quay.io/bsutter/quarkus-demo:v2 --output policy-input --policy '' | jq '.attestations[]' > ec-input-output.json
+```
+
+cosign's view
+
+```
+cosign verify-attestation --type slsaprovenance --key cosign.pub quay.io/bsutter/quarkus-demo:v2 | jq -r .payload | base64 -d | jq . > cosign-verify-attestation-output.json
+```
+
+![cosign vs ec](/images/cosign-vs-ec.png)
+
+Take note of the extras section which is part of the diff for `ec`
+
+Your rules will be based on the ec view of the input
+
+
 ## Create our own policies/rules
 
 Create rules
@@ -378,7 +667,6 @@ echo 'package mypackage
 import future.keywords.contains
 import future.keywords.if
 import future.keywords.in
-
 
 # METADATA
 # title: Builder ID
@@ -403,11 +691,32 @@ deny contains result if {
 		"code": "zero_to_hero.builder_id",
 		"msg": sprintf("The builder ID %q is not expected, %q", [got, expected])
 	}
-}
-' > rules.rego
+}' > rules.rego
 ```
 
-Create policy configuration referencing the rules
+For interactive testing of your rego based rules, try the https://play.openpolicyagent.org/
+
+
+The following extracts the input data
+
+```
+ec validate image --public-key cosign.pub --image quay.io/bsutter/quarkus-demo:v2 --output policy-input --policy '' | jq '.' > ec-real-input.json
+```
+
+ec-real-input.json and rules.rego can be copied and pasted into the online Playground
+
+Click Evaluate
+
+![playground 1](/images/playground-1.png)
+
+The empty deny array means all is good
+
+Change the expected value and click Evaluate again
+
+![playground 2](/images/playground-2.png)
+
+
+In any case, back to `ec` create policy.yaml referencing the rules for use with the `ec` CLI.  
 
 ```
 echo "
@@ -417,6 +726,8 @@ sources:
       - $(pwd)/rules.rego
 " > policy.yaml
 ```
+
+Normally these policies files will live in git or a OCI registry like docker.io or quay.io
 
 Validate it
 
@@ -495,6 +806,40 @@ jq '.image.config.Entrypoint[]' ec-input-rules-quay.json
 "/opt/jboss/container/java/run/run-java.sh"
 ```
 
+```
+jq '.image.config.Env[]' ec-input-rules-quay.json
+```
+
+```
+"container=oci"
+"HOME=/home/jboss"
+"JAVA_HOME=/usr/lib/jvm/java-17"
+"JAVA_VENDOR=openjdk"
+"JAVA_VERSION=17"
+"JBOSS_CONTAINER_OPENJDK_JDK_MODULE=/opt/jboss/container/openjdk/jdk"
+"AB_PROMETHEUS_JMX_EXPORTER_CONFIG=/opt/jboss/container/prometheus/etc/jmx-exporter-config.yaml"
+"JBOSS_CONTAINER_PROMETHEUS_MODULE=/opt/jboss/container/prometheus"
+"JBOSS_CONTAINER_MAVEN_38_MODULE=/opt/jboss/container/maven/38/"
+"MAVEN_VERSION=3.8"
+"S2I_SOURCE_DEPLOYMENTS_FILTER=*.jar quarkus-app"
+"JBOSS_CONTAINER_S2I_CORE_MODULE=/opt/jboss/container/s2i/core/"
+"JBOSS_CONTAINER_JAVA_PROXY_MODULE=/opt/jboss/container/java/proxy"
+"JBOSS_CONTAINER_JAVA_JVM_MODULE=/opt/jboss/container/java/jvm"
+"JBOSS_CONTAINER_UTIL_LOGGING_MODULE=/opt/jboss/container/util/logging/"
+"JBOSS_CONTAINER_MAVEN_DEFAULT_MODULE=/opt/jboss/container/maven/default/"
+"JBOSS_CONTAINER_MAVEN_S2I_MODULE=/opt/jboss/container/maven/s2i"
+"JAVA_DATA_DIR=/deployments/data"
+"JBOSS_CONTAINER_JAVA_RUN_MODULE=/opt/jboss/container/java/run"
+"JBOSS_CONTAINER_JAVA_S2I_MODULE=/opt/jboss/container/java/s2i"
+"JBOSS_IMAGE_NAME=ubi8/openjdk-17"
+"JBOSS_IMAGE_VERSION=1.17"
+"LANG=C.utf8"
+"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/s2i"
+"LANGUAGE=en_US:en"
+"JAVA_OPTS_APPEND=-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+"JAVA_APP_JAR=/deployments/quarkus-run.jar"
+```
+
 And check the current builder id 
 
 ```
@@ -505,9 +850,9 @@ jq '.attestations[].predicate.builder.id' ec-input-rules-quay.json
 "https://localhost/dummy-id"
 ```
 
-Now let's try for a failing rule
+## Failing rule
 
-Create a rules-fail.rego 
+Now let's try for a failing rule. Create a rules-fail.rego file
 
 ```
 echo 'package mypackage
@@ -531,16 +876,27 @@ deny contains result if {
 	some attestation in input.attestations
 	attestation.statement.predicateType == "https://slsa.dev/provenance/v0.2"
 
-	expected := "https://anotherhost/another-dummy-id"
-	received := attestation.statement.predicate.builder.id
+	expected := "https://localhost/NOT-dummy-id"
+	got := attestation.statement.predicate.builder.id
 
-	expected != received
+	expected != got
 
 	result := {
-		"code": "mystuff.builder_id",
-		"msg": sprintf("The builder ID %q is NOT invalid, expected %q", [received, expected])
+		"code": "zero_to_hero.builder_id",
+		"msg": sprintf("The builder ID %q is not expected. Expected %q", [got, expected])
 	}
 }' > rules-fail.rego
+```
+
+Create a policy-fail.yaml
+
+```
+echo "
+---
+sources:
+  - policy:
+      - $(pwd)/rules-fail.rego
+" > policy-fail.yaml
 ```
 
 ```
@@ -553,10 +909,186 @@ jq '.components[].violations[].msg' ec-output-rules-fail-quay.json
 ```
 
 ```
-"The builder ID \"https://localhost/dummy-id\" is NOT invalid, received \"https://anotherhost/another-dummy-id\""
+"The builder ID \"https://localhost/dummy-id\" is not expected. Expected \"https://localhost/NOT-dummy-id\""
 ```
 
-## Create and validate a custom attestation
+
+## Other rule examples 
+
+
+
+Remember `ec`'s input 
+
+```
+ec validate image --public-key cosign.pub --image quay.io/bsutter/quarkus-demo:v2 --policy policy.yaml \
+    --show-successes --info --output policy-input
+```
+
+Test reproducible
+
+```
+package mypackage
+
+import future.keywords.contains
+import future.keywords.if
+import future.keywords.in
+
+deny contains result if {
+	some attestation in input.attestations
+	attestation.statement.predicateType == "https://slsa.dev/provenance/v0.2"
+
+	expected := true
+	got := attestation.statement.predicate.metadata.reproducible
+
+	expected != got
+
+	result := {
+		"code": "zero_to_hero.reproducible",
+		"msg": sprintf("Reproducible %q is not expected, %q", [got, expected]),
+	}
+}
+```
+
+![reproducible](/images/playground-3.png)
+
+Test the name
+
+```
+package mypackage
+
+import future.keywords.contains
+import future.keywords.if
+import future.keywords.in
+
+deny contains result if {
+	some attestation in input.attestations
+	attestation.statement.predicateType == "https://slsa.dev/provenance/v0.2"
+
+	expected := "NOT quay.io/bsutter/quarkus-demo"
+	got := attestation.statement.subject[0].name
+
+	expected != got
+
+	result := {
+		"code": "zero_to_hero.name",
+		"msg": sprintf("Name %q is not expected, %q", [got, expected]),
+	}
+}
+```
+
+![name](/images/playground-4.png)
+
+
+Not limited by the attestations
+
+```
+package mypackage
+
+import future.keywords.contains
+import future.keywords.if
+import future.keywords.in
+
+deny contains result if {
+	expected := "NOT /opt/jboss/container/java/run/run-java.sh"
+	got := input.image.config.Entrypoint[0]
+
+	expected != got
+
+	result := {
+		"code": "zero_to_hero.entrypoint",
+		"msg": sprintf("entrypoint %q is not expected, %q", [got, expected]),
+	}
+}
+```
+
+![entrypoint](/images/playground-5.png)
+
+```
+echo '
+package mypackage
+
+import future.keywords.contains
+import future.keywords.if
+import future.keywords.in
+
+deny contains result if {
+	expected := "NOT /opt/jboss/container/java/run/run-java.sh"
+	got := input.image.config.Entrypoint[0]
+
+	expected != got
+
+	result := {
+		"code": "zero_to_hero.entrypoint",
+		"msg": sprintf("entrypoint %q is not expected, %q", [got, expected]),
+	}
+}
+' > rules-entrypoint.rego
+```
+
+Install a rego linter
+
+```
+brew install styrainc/packages/regal
+```
+
+```
+regal lint rules-entrypoint.rego
+```
+
+```
+Rule:         	opa-fmt
+Description:  	File should be formatted with `opa fmt`
+Category:     	style
+Location:     	rules-entrypoint.rego
+Documentation:	https://docs.styra.com/regal/rules/style/opa-fmt
+```
+
+```
+brew install opa
+```
+
+```
+opa fmt rules-entrypoint.rego > rules-entrypoint-formatted.rego
+```
+
+```
+regal lint rules-entrypoint-formatted.rego
+```
+
+```
+1 file linted. No violations found.
+```
+
+Create EC policy for the new rule
+
+```
+echo "
+---
+sources:
+  - policy:
+      - $(pwd)/rules-entrypoint-formatted.rego
+" > policy-rules-entrypoint-formatted.yaml
+```
+
+```
+ec validate image --public-key cosign.pub --image quay.io/bsutter/quarkus-demo:v2 --policy policy-rules-entrypoint-formatted.yaml \
+    --show-successes --info --output json
+```
+
+```
+Error: success criteria not met
+```
+
+```
+ec validate image --public-key cosign.pub --image quay.io/bsutter/quarkus-demo:v2 --policy policy-rules-entrypoint-formatted.yaml --show-successes --info --output json | jq '.components[].violations[].msg'
+```
+
+```
+Error: success criteria not met
+"entrypoint \"/opt/jboss/container/java/run/run-java.sh\" is not expected, \"NOT /opt/jboss/container/java/run/run-java.sh\""
+```
+
+## Quick Summary
 
 Verify the signature
 
@@ -588,26 +1120,106 @@ The following checks were performed on each of these signatures:
 {"payloadType":"application/vnd.in-toto+json","payload":"eyJfdHlwZSI6Imh0dHBzOi8vaW4tdG90by5pby9TdGF0ZW1lbnQvdjAuMSIsInByZWRpY2F0ZVR5cGUiOiJodHRwczovL3Nsc2EuZGV2L3Byb3ZlbmFuY2UvdjAuMiIsInN1YmplY3QiOlt7Im5hbWUiOiJxdWF5LmlvL2JzdXR0ZXIvcXVhcmt1cy1kZW1vIiwiZGlnZXN0Ijp7InNoYTI1NiI6IjhhYWYwY2Y0YzBhZTEzMTA4OTYzZjU3YjBlNTg4MjBjNjdiMjZkY2NjNWQ4NjdiOWNiMWFiYjBiNzg4NjU1NmEifX1dLCJwcmVkaWNhdGUiOnsiYnVpbGRlciI6eyJpZCI6Imh0dHBzOi8vbG9jYWxob3N0L2R1bW15LWlkIn0sImJ1aWxkVHlwZSI6Imh0dHBzOi8vbG9jYWxob3N0L2R1bW15LXR5cGUiLCJpbnZvY2F0aW9uIjp7ImNvbmZpZ1NvdXJjZSI6e319LCJidWlsZENvbmZpZyI6e30sIm1ldGFkYXRhIjp7ImJ1aWxkU3RhcnRlZE9uIjoiMjAyMy0wOS0yNVQxNjoyNjo0NFoiLCJidWlsZEZpbmlzaGVkT24iOiIyMDIzLTA5LTI1VDE2OjI4OjU5WiIsImNvbXBsZXRlbmVzcyI6eyJwYXJhbWV0ZXJzIjpmYWxzZSwiZW52aXJvbm1lbnQiOmZhbHNlLCJtYXRlcmlhbHMiOmZhbHNlfSwicmVwcm9kdWNpYmxlIjpmYWxzZX19fQ==","signatures":[{"keyid":"","sig":"MEUCIQCRe6MMGB9hBnbJrLOG/20604+qitRk7c6QxKcSqsfhJAIgY01Rx9fXQgEQw4/UbbZDm8XqOFLJUH0uaClOSfAa9hk="}]}
 ```
 
+Create some rego based rules
+
 ```
-echo '
-{
-  "_type": "https://in-toto.io/Statement/v0.1",
-  "predicateType": "https://cosign.sigstore.dev/attestation/v1",
-  "subject": [
-    {
+echo 'package mypackage
+
+import future.keywords.contains
+import future.keywords.if
+import future.keywords.in
+
+# METADATA
+# title: Builder ID
+# description: Verify the SLSA Provenance has the builder.id set to
+#   the expected value.
+# custom:
+#   short_name: builder_id
+#   failure_msg: The builder ID %q is not the expected %q
+#   solution: >-
+#     Ensure the correct build system was used to build the container
+#     image.
+deny contains result if {
+	some attestation in input.attestations
+	attestation.statement.predicateType == "https://slsa.dev/provenance/v0.2"
+
+	expected := "https://localhost/dummy-id"
+	got := attestation.statement.predicate.builder.id
+
+	expected != got
+
+	result := {
+		"code": "zero_to_hero.builder_id",
+		"msg": sprintf("The builder ID %q is not expected, %q", [got, expected])
+	}
+}' > rules.rego 
+```
+
+Format the rules
+
+```
+opa fmt rules.rego > rules-formatted.rego
+```
+
+Lint the formatted rules
+
+```
+regal lint rules-formatted.rego
+```
+
+Create a policy
+
+```
+echo "
+---
+sources:
+  - policy:
+      - $(pwd)/rules-formatted.rego
+" > policy-recap.yaml
+```
+
+Drive it through `ec`
+
+```
+ec validate image --public-key cosign.pub --image quay.io/bsutter/quarkus-demo:v2 --policy policy-recap.yaml --show-successes --info | jq '.components[0].successes'
+```
+
+```
+[
+  {
+    "msg": "Pass",
+    "metadata": {
+      "code": "builtin.attestation.signature_check",
+      "description": "The attestation signature matches available signing materials.",
+      "title": "Attestation signature check passed"
     }
-  ],
-  "predicate": {
-    "Data": "stuff"
+  },
+  {
+    "msg": "Pass",
+    "metadata": {
+      "code": "builtin.attestation.syntax_check",
+      "description": "The attestation has correct syntax.",
+      "title": "Attestation syntax check passed"
+    }
+  },
+  {
+    "msg": "Pass",
+    "metadata": {
+      "code": "builtin.image.signature_check",
+      "description": "The image signature matches available signing materials.",
+      "title": "Image signature check passed"
+    }
+  },
+  {
+    "msg": "Pass",
+    "metadata": {
+      "code": "mypackage.builder_id",
+      "description": "Verify the SLSA Provenance has the builder.id set to the expected value.",
+      "title": "Builder ID"
+    }
   }
-}
-' > custom-predicate.json
+]
 ```
-
-```
-cosign attest --predicate custom-predicate.json --type custom --key cosign.key quay.io/burrsutter/quarkus-demo:v2
-```
-
 
 ## Playing with skopeo
 
