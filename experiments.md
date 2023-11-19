@@ -1,6 +1,6 @@
-# Experiments with cosign, ec & Tekton Chains
+# Experiments with cosign, ec & Tekton Chains & Dance cluster
 
-Login into the cluster
+Login into the Dance cluster
 
 ```
 oc login 
