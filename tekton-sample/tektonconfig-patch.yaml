@@ -1,0 +1,9 @@
+apiVersion: v1
+spec:
+  chain:
+    disabled: false
+    artifacts.taskrun.format: "in-toto"
+    artifacts.taskrun.storge: ""
+    artifacts.pipelinerun.format: "in-toto"
+    artifacts.pipelinerun.storage: "oci"
+    transparency.enabled: "false"
