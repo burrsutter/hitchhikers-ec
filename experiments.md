@@ -9,8 +9,18 @@ oc login
 Login into the Quay inside that Cluster
 
 ```
-docker login quay-bthp2.apps.cluster-bthp2.sandbox1086.opentlc.com
+export REGISTRY=quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com
+export REPOSITORY=quayadmin
+export IMAGE=training-app
+export SIGSTORE_REKOR_PUBLIC_KEY=https://$(oc get route rekor-server -n rekor -ojson | jq -r '.spec.host')/api/v1/log/publicKey
+export REKOR=https://$(oc get route rekor-server -n rekor -ojson | jq -r '.spec.host')
 ```
+
+```
+docker login $REGISTRY
+```
+
+Credentials should have been given to you by your admin
 
 ```
 GitVersion:    2.2.1
@@ -23,7 +33,7 @@ Platform:      darwin/arm64
 ```
 
 ```
-cosign tree quay-bthp2.apps.cluster-bthp2.sandbox1086.opentlc.com/quayadmin/training-app
+cosign tree $REGISTRY/$REPOSITORY/$IMAGE
 ```
 
 ```
@@ -37,26 +47,89 @@ cosign tree quay-bthp2.apps.cluster-bthp2.sandbox1086.opentlc.com/quayadmin/trai
 ```
 
 ```
-cosign verify --key "k8s://openshift-pipelines/signing-secrets" quay-bthp2.apps.cluster-bthp2.sandbox1086.opentlc.com/quayadmin/training-app
+cosign download sbom $REGISTRY/$REPOSITORY/$IMAGE
 ```
 
 ```
-Verification for quay-bthp2.apps.cluster-bthp2.sandbox1086.opentlc.com/quayadmin/training-app:latest --
+cosign download sbom $REGISTRY/$REPOSITORY/$IMAGE | grep "aayushatharva.brotli4j"
+```
+
+```
+oc get secret -n openshift-pipelines signing-secrets -o json | jq -r '.data["cosign.pub"]|@base64d' > cosign-remote.pub
+```
+
+or
+
+```
+cosign public-key --key k8s://openshift-pipelines/signing-secrets > cosign-remote.pub
+```
+
+```
+cat cosign-remote.pub
+```
+
+```
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZAQBjKPuond8kvDuUd9DFPOnSZu0
+i2vuKwH8WYPyxr3NorL/da65kCubcR0X/qpLNrfJvdvqm2PcMkcdolelKQ==
+-----END PUBLIC KEY-----
+```
+
+
+```
+cosign verify --key cosign-remote.pub $REGISTRY/$REPOSITORY/$IMAGE --insecure-ignore-tlog
+```
+
+```
+WARNING: Skipping tlog verification is an insecure practice that lacks of transparency and auditability verification for the signature.
+
+Verification for quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com/quayadmin/training-app:latest --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - The signatures were verified against the specified public key
+
+[{"critical":{"identity":{"docker-reference":"quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com/quayadmin/training-app"},"image":{"docker-manifest-digest":"sha256:c26cd2976d4a42eec2e7d273ce6947a722fdfa97d2ca6c58f48d0a6cb9ab8dcd"},"type":"cosign container image signature"},"optional":null}]
+```
+
+The rekor pub key needs to be downloaded from the Rekor instance and placed in a local file
+
+```
+echo $SIGSTORE_REKOR_PUBLIC_KEY
+curl -sLO $SIGSTORE_REKOR_PUBLIC_KEY
+```
+
+and the special env var needs to point to the file location
+
+```
+export SIGSTORE_REKOR_PUBLIC_KEY=publicKey
+```
+
+```
+echo $REGISTRY 
+echo $REPOSITORY
+echo $IMAGE
+echo $REKOR
+echo $SIGSTORE_REKOR_PUBLIC_KEY
+cosign verify --key cosign-remote.pub $REGISTRY/$REPOSITORY/$IMAGE --rekor-url=$REKOR
+```
+
+```
+Verification for quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com/quayadmin/training-app:latest --
 The following checks were performed on each of these signatures:
   - The cosign claims were validated
   - The claims were present in the transparency log
   - The signatures were integrated into the transparency log when the certificate was valid
   - The signatures were verified against the specified public key
 
-[{"critical":{"identity":{"docker-reference":"quay-bthp2.apps.cluster-bthp2.sandbox1086.opentlc.com/quayadmin/training-app"},"image":{"docker-manifest-digest":"sha256:1b080835834903f7f0f87c07df667ec4aca7c4a5b9c64d0eb2bc77f7f9843e12"},"type":"cosign container image signature"},"optional":null}]
+[{"critical":{"identity":{"docker-reference":"quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com/quayadmin/training-app"},"image":{"docker-manifest-digest":"sha256:70d0c636aa06add378b246342de251f43182f08b2253c975b5cac6ff91d6124f"},"type":"cosign container image signature"},"optional":null}]
 ```
 
 ```
-cosign verify-attestation --type slsaprovenance --key "k8s://openshift-pipelines/signing-secrets" quay-bthp2.apps.cluster-bthp2.sandbox1086.opentlc.com/quayadmin/training-app
+cosign verify-attestation --type slsaprovenance --key cosign-remote.pub $REGISTRY/$REPOSITORY/$IMAGE --rekor-url=$REKOR
 ```
 
 ```
-cosign verify-attestation --type slsaprovenance --key "k8s://openshift-pipelines/signing-secrets" quay-bthp2.apps.cluster-bthp2.sandbox1086.opentlc.com/quayadmin/training-app | jq -r .payload | base64 -d | jq .
+cosign verify-attestation --type slsaprovenance --key cosign-remote.pub $REGISTRY/$REPOSITORY/$IMAGE --rekor-url=$REKOR | jq -r .payload | base64 -d | jq .
 ```
 
 ```
@@ -190,25 +263,10 @@ cosign verify-attestation --type slsaprovenance --key "k8s://openshift-pipelines
 ```
 
 ```
-cosign download attestation quay-bthp2.apps.cluster-bthp2.sandbox1086.opentlc.com/quayadmin/training-app | jq -r .payload | base64 -d | jq .
+cosign download attestation $REGISTRY/$REPOSITORY/$IMAGE | jq -r .payload | base64 -d | jq .
 ```
 
-Make a local copy of the pub key to work without `oc login`
-
-```
-oc get secret -n openshift-pipelines signing-secrets -o json | jq -r '.data["cosign.pub"]|@base64d' > cosign.pub
-```
-
-```
-oc get secret -n openshift-pipelines signing-secrets -o json | jq -r '.data["cosign.pub"]|@base64d' > cosign.pub
-cat cosign.pub
-```
-
-or
-
-```
-cosign public-key --key k8s://openshift-pipelines/signing-secrets > cosign.pub
-```
+## ec 
 
 ```
 ec version
@@ -229,6 +287,105 @@ Kubernetes Client  v0.28.3
 ```
 
 ```
-ec validate image --public-key cosign.pub --image quay-w94nt.apps.cluster-w94nt.sandbox1863.opentlc.com/quayadmin/training-app --policy 'git::github.com/enterprise-contract/config//default' --ignore-rekor
+ec validate image --public-key cosign-remote.pub --image $REGISTRY/$REPOSITORY/$IMAGE --ignore-rekor
 ```
+
+```
+ec validate image --public-key cosign-remote.pub --image $REGISTRY/$REPOSITORY/$IMAGE --ignore-rekor --policy 'git::github.com/enterprise-contract/config//default' --show-successes --info --output yaml
+```
+
+```
+ec validate image --public-key cosign-remote.pub --image $REGISTRY/$REPOSITORY/$IMAGE --ignore-rekor --policy 'git::github.com/enterprise-contract/config//default' --show-successes --info --output yaml
+```
+
+
+## Rekor GUI
+
+```
+git clone https://github.com/sigstore/rekor-search-ui
+```
+
+```
+nvm use 18
+```
+
+```
+npm -g install next
+```
+
+create .env.local
+
+and add the Route from the cluster
+
+```
+NEXT_PUBLIC_REKOR_DEFAULT_DOMAIN=https://rekor-server-rekor.apps.cluster-xkf7j.sandbox2018.opentlc.com
+```
+
+```
+npm run dev
+```
+
+```
+open http://localhost:3000
+```
+
+![Rekor GUI](/images/rekor-gui-1.png)
+
+
+## https://oci.dag.dev
+
+Use the .att and oci.dag.dev to explore the attestation
+
+```
+cosign tree $REGISTRY/$REPOSITORY/training-app
+```
+
+```
+📦 Supply Chain Security Related artifacts for an image: quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com/quayadmin/training-app
+└── 💾 Attestations for an image tag: quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com/quayadmin/training-app:sha256-c26cd2976d4a42eec2e7d273ce6947a722fdfa97d2ca6c58f48d0a6cb9ab8dcd.att
+   └── 🍒 sha256:b23975b199aa618e3863f4c83fc7444c6ccb4ac4b675e123f05715b5bf93e4c2
+└── 🔐 Signatures for an image tag: quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com/quayadmin/training-app:sha256-c26cd2976d4a42eec2e7d273ce6947a722fdfa97d2ca6c58f48d0a6cb9ab8dcd.sig
+   └── 🍒 sha256:5a15f8e2bc240f3a39adc167b694132a994da764c2dec69257404c3e760c932f
+└── 📦 SBOMs for an image tag: quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com/quayadmin/training-app:sha256-c26cd2976d4a42eec2e7d273ce6947a722fdfa97d2ca6c58f48d0a6cb9ab8dcd.sbom
+   └── 🍒 sha256:b254881b222419d0ddeedd9fca8bdcd2a61cd50e57b95cba473eefe5d8b411b7
+```
+
+Copy the attestation image 
+
+```
+quay-xkf7j.apps.cluster-xkf7j.sandbox2018.opentlc.com/quayadmin/training-app:sha256-c26cd2976d4a42eec2e7d273ce6947a722fdfa97d2ca6c58f48d0a6cb9ab8dcd.att
+```
+
+Paste into https://oci.dag.dev
+
+Click Submit Query
+
+![Submit Query](/images/oci-dag-dev-1.png)
+
+Click on digest under layers
+
+![digest](/images/oci-dag-dev-2.png)
+
+Click on the base64 encoded payload
+
+![Click again](/images/oci-dag-dev-3.png)
+
+Explore
+
+![explore](/images/oci-dag-dev-4.png)
+
+
+
+## Stuff
+
+                "chain": {
+                    "artifacts.oci.storage": "oci",
+                    "artifacts.pipelinerun.format": "in-toto",
+                    "artifacts.pipelinerun.storage": "oci",
+                    "artifacts.taskrun.format": "in-toto",
+                    "artifacts.taskrun.storage": "oci",
+                    "disabled": false,
+                    "transparency.enabled": "true",
+                    "transparency.url": "http://rekor-server.rekor.svc"
+                },
 

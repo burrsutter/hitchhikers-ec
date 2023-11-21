@@ -1,7 +1,9 @@
+.DS_Store
 bin
 cosign.key
 cosign.pub
 burr-cosign.pub
+cosign-remote.pub
 remote.pub
 ec-input-rules-quay.json
 ec-output-rules-quay.json
@@ -14,3 +16,4 @@ verify-attestation-output.txt
 cosign-verify-attestation-output.json
 ec-input-output.json
 ec-real-input.json
+publicKey
